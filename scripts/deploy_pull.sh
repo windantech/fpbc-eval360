@@ -31,7 +31,7 @@ ERROR: this folder is not a git repository.
 
 First-time setup on the server:
   cd /home/vantage/domains/eval360.tech/public_html/mel
-  git clone https://USERNAME:TOKEN@github.com/windantech/fpc-eval360.git fpc
+  git clone https://USERNAME:TOKEN@github.com/windantech/fpbc-eval360.git fpc
   cd fpc
   bash scripts/deploy_pull.sh
 MSG

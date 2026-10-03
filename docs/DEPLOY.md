@@ -15,11 +15,11 @@ Once, from this machine:
 
 ```bash
 cd ~/Documents/FPC
-git remote add origin https://github.com/windantech/fpc-eval360.git
+git remote add origin https://github.com/windantech/fpbc-eval360.git
 git push -u origin main
 ```
 
-Create `windantech/fpc-eval360` on GitHub first (private is fine — the deploy uses a token).
+Create `windantech/fpbc-eval360` on GitHub first (private is fine — the deploy uses a token).
 If git asks for a password, paste a personal access token with `repo` scope, not your
 account password.
 
@@ -29,7 +29,7 @@ Over SSH, once:
 
 ```bash
 cd /home/vantage/domains/eval360.tech/public_html/mel
-git clone https://USERNAME:TOKEN@github.com/windantech/fpc-eval360.git fpc
+git clone https://USERNAME:TOKEN@github.com/windantech/fpbc-eval360.git fpc
 cd fpc
 bash scripts/deploy_pull.sh
 ```
