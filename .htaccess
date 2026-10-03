@@ -1,0 +1,14 @@
+# ─────────────────────────────────────────────────────────────────
+# FPC — root .htaccess
+# The web server's document root should point at /public, not here.
+# This is defence in depth for when it does not.
+# ─────────────────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Dotfiles (.env included)
+    RewriteRule "(^|/)\." - [F]
+
+    # Source, config and storage are never web-reachable
+    RewriteRule ^(bootstrap|config|db|lib|migrations|seeds|storage|vendor|scripts)/ - [F]
+</IfModule>

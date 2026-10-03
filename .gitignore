@@ -1,0 +1,37 @@
+# ── Secrets ─────────────────────────────────────────────
+# NOTE: the ATBU project deliberately tracked .env for a two-device sync
+# workflow, and then had to live with real API keys in git history. Do not
+# repeat that here. .env stays out; .env.example carries the shape.
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# ── Runtime / generated ─────────────────────────────────
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+storage/cache/*
+!storage/cache/.gitkeep
+storage/exports/*
+!storage/exports/.gitkeep
+
+# ── Dependencies ────────────────────────────────────────
+vendor/
+node_modules/
+
+# ── Editors / OS ────────────────────────────────────────
+.vscode/
+.idea/
+.claude/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── Logs & dumps ────────────────────────────────────────
+*.log
+error_log
+*.sql.gz
+*.bak
