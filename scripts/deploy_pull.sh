@@ -6,6 +6,9 @@
 #   cd /home/vantage/domains/eval360.tech/public_html/mel/fpc
 #   bash scripts/deploy_pull.sh
 #
+# The repository is public, so this pulls without any credentials. Nothing secret is
+# stored on the server.
+#
 # What it does NOT touch:
 #   - .env            (gitignored in this project, so git never sees it)
 #   - storage/        (uploads, logs, exports — gitignored)
@@ -31,9 +34,12 @@ ERROR: this folder is not a git repository.
 
 First-time setup on the server:
   cd /home/vantage/domains/eval360.tech/public_html/mel
-  git clone https://USERNAME:TOKEN@github.com/windantech/fpbc-eval360.git fpc
+  git clone https://github.com/windantech/fpbc-eval360.git fpc
   cd fpc
   bash scripts/deploy_pull.sh
+
+(The repository is public, so no credentials are needed to clone or pull. If it is
+ever made private, put USERNAME:TOKEN@ in front of github.com in the clone URL.)
 MSG
     exit 1
 fi

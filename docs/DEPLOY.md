@@ -19,9 +19,14 @@ git remote add origin https://github.com/windantech/fpbc-eval360.git
 git push -u origin main
 ```
 
-Create `windantech/fpbc-eval360` on GitHub first (private is fine — the deploy uses a token).
 If git asks for a password, paste a personal access token with `repo` scope, not your
-account password.
+account password. Pushing always needs a token; **pulling does not, while the repository
+is public**.
+
+> The repository is public. It carries FPC's logframe wording, the project and donor
+> details, and two real staff names. No child's name appears anywhere, and the case data is
+> synthetic — but the programme design and the donors' report templates are readable by
+> anyone. Make it private if that is not intended.
 
 ## 2 · First deployment on the server
 
@@ -29,14 +34,23 @@ Over SSH, once:
 
 ```bash
 cd /home/vantage/domains/eval360.tech/public_html/mel
-git clone https://USERNAME:TOKEN@github.com/windantech/fpbc-eval360.git fpc
+git clone https://github.com/windantech/fpbc-eval360.git fpc
 cd fpc
 bash scripts/deploy_pull.sh
 ```
 
-The token is stored in the clone's `.git/config` so later pulls need no password. That file
-is outside the web root's reachable paths and is blocked by `.htaccess` in any case, but
-treat it as a secret: anyone with shell access can read it.
+The repository is public, so cloning and pulling need no credentials and nothing secret is
+stored on the server.
+
+**If the repository is ever made private**, the clone URL has to carry a token:
+
+```bash
+git clone https://USERNAME:TOKEN@github.com/windantech/fpbc-eval360.git fpc
+```
+
+That token is then written into the clone's `.git/config`. It is outside the web root's
+reachable paths and blocked by `.htaccess`, but treat it as a secret: anyone with shell
+access can read it.
 
 ## 3 · Every deployment after that
 
