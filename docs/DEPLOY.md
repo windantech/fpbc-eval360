@@ -92,6 +92,17 @@ node scripts/build-guide.js
 
 Either way, commit the regenerated file so the published copy matches the published demo.
 
+## Addresses
+
+| Address | Goes to |
+|---|---|
+| `mel.eval360.tech/fpc` | The landing page |
+| `mel.eval360.tech/fpc/demo.html` | The demonstration |
+| `mel.eval360.tech/fpc/guide.html` | The user guide |
+
+`demo.html` and `guide.html` are one-line forwards to the full filenames. They exist so a
+link that is typed rather than tapped cannot be lost to a capital letter.
+
 ## A note on the subfolder
 
 Everything is relative — `index.html` links to `fpc_eval360_demo.html`, not to `/fpc/…` —
