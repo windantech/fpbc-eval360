@@ -563,6 +563,10 @@ button{font-family:inherit;font-size:inherit}
   width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;
   background:var(--card);font-family:inherit;font-size:13px;color:var(--ink)}
 .phone-body textarea{resize:vertical;min-height:54px}
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.exp-grid label{font-size:11px;color:var(--ink-mute);display:flex;flex-direction:column}
+.exp-grid .sel{width:100%;max-width:none;margin-top:3px}
+@media (max-width:640px){.exp-grid{grid-template-columns:1fr}}
 .phone-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .phone-grid label{margin-top:0}
 .phone-foot{padding:11px 13px;border-top:1px solid var(--line);background:var(--card)}
@@ -2518,7 +2522,7 @@ function seedCases(){
         ? (disabilityLeft--, true) : false;
 
       cases.push({
-        id:`FPC-CP-2026-${String(idx+1).padStart(4,'0')}`,
+        id:`FPC-CP-2026-${String(cases.length+1).padStart(4,'0')}`,   // Q3 continues the series
         dateReported: reported.toISOString().slice(0,10),
         period:q.period, gvh, village, sex,
         ageBand: ages[Math.floor(rand()*3)],
@@ -2722,6 +2726,11 @@ function seedFinance(){
     if (a.period !== '2026-Q2') return;
     if (a.fund === 'cssf_restricted')   q2.restricted   += (a.actualCost||0);
     if (a.fund === 'cssf_unrestricted') q2.unrestricted += (a.actualCost||0);
+  });
+  (appData.expenses || []).forEach(e => {
+    if (e.period === '2026-Q1' || e.period === '2026-Q2') spentMWK[e.fund] += e.actualCost;
+    if (e.period === '2026-Q2' && e.fund === 'cssf_restricted')   q2.restricted   += e.actualCost;
+    if (e.period === '2026-Q2' && e.fund === 'cssf_unrestricted') q2.unrestricted += e.actualCost;
   });
   const cssfMWK = q2.restricted + q2.unrestricted;
 
@@ -3139,11 +3148,20 @@ function reportedActivities(fund){
   return appData.activities.filter(a => a.fund === fund && periods.includes(a.period));
 }
 
+/* Costs that are not an activity — salaries, rent, utilities — are posted to
+   the expense ledger against a fund and a budget line. They count towards
+   spend exactly as activity costs do, under the same reporting periods. */
+function reportedExpenses(fund){
+  const periods = fund === 'knh' ? ['2026-Q1','2026-Q2'] : ['2026-Q2'];
+  return (appData.expenses || []).filter(e => e.fund === fund && periods.includes(e.period));
+}
+const reportedSpend = fund => reportedActivities(fund).concat(reportedExpenses(fund));
+
 function calcBudgetLines(fund){
   const b  = appData.budget[fund];
   const fx = fund === 'knh' ? appData.config.fx.EUR_MWK : appData.config.fx.GBP_MWK;
   const actual = {};
-  reportedActivities(fund).forEach(a => {
+  reportedSpend(fund).forEach(a => {
     actual[a.costLine] = (actual[a.costLine] || 0) + (a.actualCost || 0);
   });
 
@@ -3183,7 +3201,7 @@ function calcBurn(fund){
                 (d.getMonth() === 0 ? ' ' + String(d.getFullYear()).slice(2) : ''));
   }
   const byMonth = {};
-  reportedActivities(fund).forEach(a => {
+  reportedSpend(fund).forEach(a => {
     const m = (a.date || '').slice(0,7);
     byMonth[m] = (byMonth[m] || 0) + (a.actualCost || 0);
   });
@@ -3663,6 +3681,7 @@ function runConsistencyChecks(){
    ═══════════════════════════════════════════════════════════════════════════ */
 function seedAll(){
   appData.varianceComments = {};
+  appData.expenses = [];
   seedRegistry();
   seedActivities();
   calibrateCosts();
@@ -5229,9 +5248,8 @@ function newActivityModal(){
         </div>`).join('')}
       </div>`,
     foot:`<button class="btn" data-action="close-modal">Cancel</button>
-          <button class="btn btn-primary" data-action="toast"
-            data-msg="Capture form lands in stage 6 with the field forms. The template structure is already loaded.">
-            <i class="bi bi-save"></i> Save activity report</button>`
+          <button class="btn btn-primary" data-action="form-open" data-id="attendance">
+            <i class="bi bi-arrow-right"></i> Continue to attendance</button>`
   });
 }
 
@@ -5739,9 +5757,12 @@ function renderCases(){
         </select></td></tr>`).join('')}
       </tbody></table></div></div>`;
 
-  return `<div class="sec-title">Case Management</div>
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="sec-title">Case Management</div>
     <div class="sec-sub">${stats.total} child protection cases. Records are anonymised —
-      no names are held, and every open is written to the access log.</div>
+      no names are held, and every open is written to the access log.</div></div>
+    <button class="btn btn-primary" data-action="form-open" data-id="case-intake">
+      <i class="bi bi-plus-lg"></i> Register a case</button></div>
     ${filters}
     ${caseView === 'kanban' ? kanban : listView}
     <div style="margin-top:18px">${aggregate}</div>`;
@@ -6212,6 +6233,8 @@ function formOpen(id){
 
   const body = id === 'attendance'   ? phoneAttendance()
              : id === 'bylaws-checklist' ? phoneBylaws()
+             : id === 'case-intake'  ? phoneCaseIntake()
+             : id === 'visit-report' ? phoneVisit()
              : phoneGeneric(f);
 
   openModal({
@@ -6306,13 +6329,186 @@ function phoneBylaws(){
     <textarea name="evidence">Minutes of the GVH CPC meeting; 2 photographs with consent.</textarea>`;
 }
 
+function expenseModal(){
+  const fx = appData.config.fx;
+  openModal({
+    title:'Record expense',
+    body:`<form id="exp-form" data-action="exp-submit">
+      <div class="banner info" style="margin-top:0"><i class="bi bi-info-circle-fill"></i>
+        <div>For costs that are not an activity — salaries, rent, utilities, office supplies.
+        Activity costs are entered on the activity record. Amounts are in MWK and converted at
+        1 EUR = ${num(fx.EUR_MWK)} · 1 GBP = ${num(fx.GBP_MWK)}.</div></div>
+      <div class="exp-grid">
+        <label>Fund<select class="sel" name="fund">
+          ${FUND_TAB.map(t => `<option value="${t.key}" ${t.key===financeFund?'selected':''}>${esc(t.label)}</option>`).join('')}
+        </select></label>
+        <label>Budget line<select class="sel" name="line">
+          ${COST_LINES.map(l => `<option value="${l.key}" ${l.key==='staff'?'selected':''}>${esc(l.label)}</option>`).join('')}
+        </select></label>
+        <label>Date of payment<input class="sel" type="date" name="date" value="2026-09-30"></label>
+        <label>Amount (MWK)<input class="sel" type="number" name="amount" min="1" step="1" value="2436000"></label>
+        <label style="grid-column:1/-1">Description<input class="sel" name="desc"
+          value="Staff salaries — September 2026 (programme staff share)"></label>
+        <label>Voucher / reference<input class="sel" name="voucher" value="PV-2026-0931"></label>
+        <label>Supporting document<input class="sel" name="doc" value="Payroll schedule, September 2026"></label>
+      </div>
+      <div style="font-size:11px;color:var(--ink-mute);margin-top:10px">
+        The reporting quarter is read from the date. Q1 and Q2 are reported; a Q3 date is held
+        for the Q3 report.</div>
+    </form>`,
+    foot:`<button class="btn" data-action="close-modal">Cancel</button>
+      <button class="btn btn-primary" type="submit" form="exp-form"><i class="bi bi-save"></i> Post expense</button>`
+  });
+}
+
+function postExpense(fd){
+  const amount = Math.round(Number(fd.get('amount')) || 0);
+  if (amount <= 0){ toast('Enter the amount in MWK.', 'warn'); return; }
+  const date = String(fd.get('date') || appData.config.today);
+  const e = {
+    id:'EXP-' + String(appData.expenses.length + 1).padStart(3,'0'),
+    date, period:periodOf(date), fund:String(fd.get('fund')), costLine:String(fd.get('line')),
+    actualCost:amount, description:String(fd.get('desc') || '').trim() || COST_LINE_LABEL[String(fd.get('line'))],
+    voucher:String(fd.get('voucher') || '').trim(), doc:String(fd.get('doc') || '').trim(),
+    by:currentUser.title, posted:nowStamp()
+  };
+  appData.expenses.push(e);
+  seedFinance();                         // spend totals, dashboard tile and reports follow
+  financeFund = e.fund;
+  closeModal();
+  showView('finance');
+  const fx = e.fund === 'knh' ? appData.config.fx.EUR_MWK : appData.config.fx.GBP_MWK;
+  const cur = e.fund === 'knh' ? 'EUR' : 'GBP';
+  const reported = reportedExpenses(e.fund).includes(e);
+  toast(`${e.id} posted: MWK ${num(amount)} (${money(cur, Math.round(amount/fx))}) to ${COST_LINE_LABEL[e.costLine]}.` +
+        (reported ? ' Spend, the burn rate and the donor reports now include it.'
+                  : ` Dated ${e.period.slice(5)} 2026, so it will appear in that quarter's report.`), 'ok');
+}
+
+const CASE_CATEGORIES = ['Neglect','Physical violence','Child labour','Child marriage',
+  'School dropout / denial of education','Emotional abuse','Sexual abuse','Other'];
+const CASE_REPORTERS = ['VCRC child','VCPC','Parent','Teacher','HSA','Self',
+  'Non-committee community member','Anonymous'];
+
+function phoneCaseIntake(){
+  const villages = g => Array.from({length:g==='MK'?8:7}, (_,i) => `${g}-V${i+1}`);
+  return `
+    <div style="font-size:11px;color:var(--ink-soft);line-height:1.55;margin-bottom:9px">
+      <i class="bi bi-shield-lock-fill"></i> No name, date of birth or household is recorded.</div>
+    <label>Date reported</label>
+    <input type="date" name="reported" value="2026-10-04">
+    <label>GVH and village</label>
+    <select name="village">
+      <optgroup label="Mwakasangira">${villages('MK').map(v=>`<option>${v}</option>`).join('')}</optgroup>
+      <optgroup label="Mwanjasi">${villages('MJ').map(v=>`<option>${v}</option>`).join('')}</optgroup>
+    </select>
+    <div class="phone-grid">
+      <div><label>Sex</label><select name="sex"><option value="F">Girl</option><option value="M">Boy</option></select></div>
+      <div><label>Age band</label><select name="age"><option>0–5</option><option selected>6–12</option><option>13–17</option></select></div>
+    </div>
+    <label style="display:flex;gap:7px;align-items:center;text-transform:none;letter-spacing:0;font-size:12px;font-weight:500">
+      <input type="checkbox" name="pwd" style="width:auto"> Child has a disability</label>
+    <label>Category</label>
+    <select name="category">${CASE_CATEGORIES.map(c=>`<option ${c==='Neglect'?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <label>Reported by</label>
+    <select name="by">${CASE_REPORTERS.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
+    <label>Framework applied</label>
+    <select name="framework"><option value="bylaw">Community by-law</option><option value="ccpja">CCPJA</option>
+      <option value="both">Both</option><option value="none">None yet</option></select>
+    <label>First response (assessment visit)</label>
+    <input type="date" name="first" value="2026-10-05">
+    <label>Referred to</label>
+    <select name="referral"><option value="">Not referred</option><option selected>DSWO</option>
+      <option>Police VSU</option><option>Health (HSA)</option></select>
+    <label>Case note</label>
+    <textarea name="note">VCPC assessment visit held with the caregiver; follow-up agreed with the DSWO.</textarea>`;
+}
+
+function submitCaseIntake(fd){
+  const reported = String(fd.get('reported') || appData.config.today);
+  const first    = String(fd.get('first') || '');
+  const village  = String(fd.get('village'));
+  const referral = String(fd.get('referral') || '');
+  const days = first ? Math.max(0, Math.round((new Date(first) - new Date(reported)) / 864e5)) : null;
+  const maxNo = Math.max(...appData.cases.map(c => Number(c.id.slice(-4))));
+  const c = {
+    id:`FPC-CP-2026-${String(maxNo + 1).padStart(4,'0')}`,
+    dateReported:reported, period:periodOf(reported), gvh:village.slice(0,2), village,
+    sex:String(fd.get('sex')), ageBand:String(fd.get('age')), disability:fd.has('pwd'),
+    category:String(fd.get('category')), reportedBy:String(fd.get('by')),
+    status: referral ? 'Referred' : (first ? 'Assessed' : 'Reported'),
+    referredTo: referral ? [referral] : [], frameworkApplied:String(fd.get('framework')),
+    pssProvided:false, pssOutcome:null, daysToFirstResponse: days ?? 0, closedDate:null,
+    note:String(fd.get('note') || '').trim(), timeline:[]
+  };
+  c.timeline.push({date:reported, event:`Reported by ${c.reportedBy}`});
+  if (first)    c.timeline.push({date:first, event:'First response — VCPC assessment visit'});
+  if (referral) c.timeline.push({date:first || reported, event:`Referred to ${referral}`});
+  appData.cases.push(c);
+  appData.fieldForms['case-intake'].submissions = appData.cases.length;
+  appData.auditLog.unshift({ts:nowStamp(), user:currentUser.title, action:'Case registered', ref:c.id});
+  closeModal();
+  showView('case-detail', c.id);
+  toast(`${c.id} registered — no name recorded.` +
+        (c.period === '2026-Q3' ? ' It counts in Q3; the Q2 figures already reported do not change.'
+                                : ' The SO2 and SO4 indicators have been recalculated.'), 'ok');
+}
+
+const VISIT_STAFF = ['MEAL Officer','Programme Officer – Child Protection','Programme Officer – ECD',
+  'Designated Safeguarding Focal Person','Executive Director','Finance & Admin Officer',
+  'Community Development Facilitators'];
+
+function phoneVisit(){
+  const staff = (sel) => VISIT_STAFF.map(s=>`<option ${s===sel?'selected':''}>${esc(s)}</option>`).join('');
+  return `
+    <label>Location</label><input name="location" value="MK-V4 and MK-V5">
+    <label>Date</label><input type="date" name="date" value="2026-10-02">
+    <label>Visit by</label><select name="by">${staff('Programme Officer – Child Protection')}</select>
+    <label>Objectives of the visit</label>
+    <textarea name="objectives">Follow up VCPC case recording after the CPP refresher.</textarea>
+    <label>Agenda — activity observed</label><input name="activity" value="VCPC case register review">
+    <label>Methodology</label><input name="method" value="Record review and interview with VCPC secretary">
+    <label>Remarks</label><input name="remarks" value="Registers up to date in MK-V4; MK-V5 missing two months.">
+    <label>General observations</label>
+    <textarea name="observations">Committee members confident on referral steps; storage of case files needs a lockable box.</textarea>
+    <label>Issue identified</label><input name="issue" value="MK-V5 case files not stored securely">
+    <label>Action to be taken</label><input name="action" value="Provide a lockable box and brief the VCPC">
+    <div class="phone-grid">
+      <div><label>Responsible</label><select name="owner">${staff('Designated Safeguarding Focal Person')}</select></div>
+      <div><label>By when</label><input type="date" name="due" value="2026-10-31"></div>
+    </div>`;
+}
+
+function submitVisit(fd){
+  const id = 'MV-' + String(appData.visits.length + 1).padStart(2,'0');
+  const date = String(fd.get('date') || appData.config.today);
+  appData.visits.push({id, location:String(fd.get('location')), date, visitBy:String(fd.get('by')),
+    objectives:String(fd.get('objectives')),
+    agenda:[{activity:String(fd.get('activity')), methodology:String(fd.get('method')),
+             remarks:String(fd.get('remarks'))}],
+    observations:String(fd.get('observations'))});
+  const issue = String(fd.get('issue') || '').trim();
+  let actId = '';
+  if (issue){
+    actId = 'ACT-A' + String(appData.actions.length + 1).padStart(2,'0');
+    const due = String(fd.get('due') || '');
+    appData.actions.push({id:actId, visit:id, issue, action:String(fd.get('action') || ''),
+      owner:String(fd.get('owner')), due,
+      status: due && due < appData.config.today ? 'overdue' : 'open'});
+  }
+  appData.fieldForms['visit-report'].submissions = appData.visits.length;
+  closeModal();
+  showView('visit-detail', id);
+  toast(`${id} filed.` + (actId ? ` The issue is now action ${actId}, owned by ${String(fd.get('owner'))}.` : ''), 'ok');
+}
+
 function phoneGeneric(f){
   return `<div style="font-size:11.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:11px">
       ${esc(f.owner)} format. Fields as filled in the field:</div>
     ${f.fields.map(x=>`<label>${esc(x)}</label><input placeholder="…">`).join('')}
     <div style="font-size:10.5px;color:var(--ink-mute);margin-top:11px">
-      Only the attendance register and the by-laws checklist are wired end to end in this
-      demo. The rest show the field layout.</div>`;
+      The attendance register, by-laws checklist, case intake and monitoring visit report are
+      wired end to end in this demo. The rest show the field layout.</div>`;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -6359,9 +6555,12 @@ function renderVisits(){
       <td class="n">${A.filter(a=>a.visit===v.id).length}</td>
     </tr>`).join('');
 
-  return `<div class="sec-title">Monitoring visits &amp; actions</div>
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="sec-title">Monitoring visits &amp; actions</div>
     <div class="sec-sub">${appData.visits.length} visits this project year, in FPC's own template.
-      Every issue raised becomes a tracked action with an owner and a date.</div>
+      Every issue raised becomes a tracked action with an owner and a date.</div></div>
+    <button class="btn btn-primary" data-action="form-open" data-id="visit-report">
+      <i class="bi bi-plus-lg"></i> New visit report</button></div>
 
     <div class="kpi-row">
       ${kpiTile('Visits conducted', String(appData.visits.length), 'Q1 and Q2 combined')}
@@ -6782,10 +6981,32 @@ function renderFinance(){
       </div></div>`;
   };
 
-  return `<div class="sec-title">Budget &amp; spend</div>
+  const ledger = (appData.expenses || []).filter(e => e.fund === fund);
+  const canPost = access('finance') === 'full';
+  const ledgerCard = `<div class="card" style="margin-bottom:18px">
+      <div class="card-head"><h3>Expenses posted</h3>
+        <span style="font-size:11.5px;color:var(--ink-mute)">costs that are not an activity —
+          staff, office, administration</span></div>
+      <div class="card-body">${ledger.length ? `<div class="tbl-scroll"><table class="fin-table">
+        <thead><tr><th>Ref</th><th>Date</th><th>Budget line</th><th>Description</th>
+          <th class="n">MWK</th><th class="n">${esc(b.currency)}</th><th>Posted by</th></tr></thead>
+        <tbody>${ledger.map(e => `<tr><td class="mono">${esc(e.id)}${e.voucher ? `<span class="fin-mwk">${esc(e.voucher)}</span>` : ''}</td>
+          <td>${fmtDate(e.date)}<span class="fin-mwk">${esc(e.period.slice(5))} 2026</span></td>
+          <td>${esc(COST_LINE_LABEL[e.costLine])}</td><td>${esc(e.description)}</td>
+          <td class="n">${num(e.actualCost)}</td>
+          <td class="n">${money(b.currency, Math.round(e.actualCost / b.fx))}</td>
+          <td>${esc(e.by)}</td></tr>`).join('')}</tbody></table></div>`
+        : `<div style="font-size:12.5px;color:var(--ink-soft)">Nothing posted to this fund's ledger yet.
+            Activity costs come from each activity record; use <strong>Record expense</strong> for
+            everything else.</div>`}</div></div>`;
+
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="sec-title">Budget &amp; spend</div>
     <div class="sec-sub">Two donors in two currencies, against one register of activity costs.
       ${esc(appData.config.fx.label)}: 1 EUR = ${num(appData.config.fx.EUR_MWK)} MWK ·
-      1 GBP = ${num(appData.config.fx.GBP_MWK)} MWK.</div>
+      1 GBP = ${num(appData.config.fx.GBP_MWK)} MWK.</div></div>
+    ${canPost ? `<button class="btn btn-primary" data-action="exp-new">
+      <i class="bi bi-plus-lg"></i> Record expense</button>` : ''}</div>
 
     <div class="banner info"><i class="bi bi-info-circle-fill"></i>
       <div>${esc(f.label)}</div></div>
@@ -6841,6 +7062,8 @@ function renderFinance(){
     </div>
 
     ${fund !== 'knh' ? splitCard() : ''}
+
+    ${ledgerCard}
 
     <div class="card" style="margin-bottom:18px">
       <div class="card-head"><h3>Budget lines</h3>
@@ -8482,9 +8705,10 @@ function guideChapters2(){
   {no:10, title:'Monitoring: forms, visits, by-laws and evidence',
    sub:'The instruments FPC already uses, in the system.',
    body:[
-    {p:`Nine field forms, all working offline, each naming the reports it feeds. Two are wired end to end in
-       this demonstration — the attendance register and the by-laws checklist — and the rest show their
-       field layout.`},
+    {p:`Nine field forms, all working offline, each naming the reports it feeds. Four are wired end to end in
+       this demonstration — the attendance register, the by-laws checklist, case intake and the monitoring
+       visit report — and the rest show their field layout. Costs that are not an activity are posted on
+       Budget &amp; Spend with Record expense.`},
     {h:'Evidence and consent'},
     {p:`${n(appData.evidence.length)} items in the photo library, ${n(appData.evidence.filter(e=>e.consent).length)}
        with a consent declaration on file. The one without is held for internal use and
@@ -9368,7 +9592,7 @@ document.addEventListener('click', e => {
                             showView('logframe'); }
   if (a === 'lf-expand'){   appData.logframe.nodes.forEach(n => lfOpen.add(n.code)); showView('logframe'); }
   if (a === 'lf-collapse'){ lfOpen = new Set(); showView('logframe'); }
-  if (a === 'lf-export'){   toast('Logframe export lands with the report generators in stage 8.','warn'); }
+  if (a === 'lf-export'){   toast('Export to Word is not part of this demonstration — the Report Centre documents export as .doc.','warn'); }
 
   // ── Indicators ──
   if (a === 'ind-toggle'){  indFilter[t.dataset.key] = !indFilter[t.dataset.key]; showView('indicators'); }
@@ -9385,6 +9609,7 @@ document.addEventListener('click', e => {
   if (a === 'case-open'){   showView('case-detail', t.dataset.id); }
 
   // ── Field forms, visits, actions ──
+  if (a === 'exp-new'){     expenseModal(); }
   if (a === 'fin-fund'){    financeFund = t.dataset.fund; showView('finance'); }
 
   // ── Report centre ──
@@ -9614,6 +9839,14 @@ document.addEventListener('submit', e => {
   aiAsk(q);
 });
 
+/* The expense form sits in a modal, not the phone frame. */
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-action="exp-submit"]');
+  if (!f) return;
+  e.preventDefault();
+  postExpense(new FormData(f));
+});
+
 /* Field forms submitted from the phone frame. */
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-action="phone-submit"]');
@@ -9622,6 +9855,8 @@ document.addEventListener('submit', e => {
   const fd = new FormData(f);
   if (f.dataset.id === 'attendance')            submitAttendance(fd);
   else if (f.dataset.id === 'bylaws-checklist') submitBylaws(fd);
+  else if (f.dataset.id === 'case-intake')      submitCaseIntake(fd);
+  else if (f.dataset.id === 'visit-report')     submitVisit(fd);
   else { closeModal(); toast('This form is shown for its field layout only in the demo.', 'warn'); }
 });
 

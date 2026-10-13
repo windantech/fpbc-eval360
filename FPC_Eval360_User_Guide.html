@@ -555,6 +555,10 @@ button{font-family:inherit;font-size:inherit}
   width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;
   background:var(--card);font-family:inherit;font-size:13px;color:var(--ink)}
 .phone-body textarea{resize:vertical;min-height:54px}
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.exp-grid label{font-size:11px;color:var(--ink-mute);display:flex;flex-direction:column}
+.exp-grid .sel{width:100%;max-width:none;margin-top:3px}
+@media (max-width:640px){.exp-grid{grid-template-columns:1fr}}
 .phone-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .phone-grid label{margin-top:0}
 .phone-foot{padding:11px 13px;border-top:1px solid var(--line);background:var(--card)}
@@ -2347,9 +2351,12 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
       <div class="shot-col">
         <div class="shot-tb"><div><b>Case Management</b><i>Child Protection</i></div>
           <div class="ss-user">AC Executive Director</div></div>
-        <div class="shot-main"><div class="shot-scale"><section class="view active"><div class="sec-title">Case Management</div>
+        <div class="shot-main"><div class="shot-scale"><section class="view active"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="sec-title">Case Management</div>
     <div class="sec-sub">49 child protection cases. Records are anonymised —
-      no names are held, and every open is written to the access log.</div>
+      no names are held, and every open is written to the access log.</div></div>
+    <button class="btn btn-primary" data-action="form-open" data-id="case-intake">
+      <i class="bi bi-plus-lg"></i> Register a case</button></div>
     
     <div class="filterbar">
       <select data-action="case-filter" data-key="category"><option value="">All categories</option>
@@ -2380,15 +2387,15 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
       <div class="kcol">
           <div class="kcol-h"><span>Reported</span><b>2</b></div>
           <div class="kcard sev-high"
-              data-action="case-open" data-id="FPC-CP-2026-0047">
-            <div class="kc-id">FPC-CP-2026-0047</div>
+              data-action="case-open" data-id="FPC-CP-2026-0048">
+            <div class="kc-id">FPC-CP-2026-0048</div>
             <div class="kc-cat">Physical violence</div>
             <div class="kc-meta">Mwakasangira · Girl 6–12
               </div>
             <div class="kc-meta">1 Oct 2026</div>
           </div><div class="kcard sev-high"
-              data-action="case-open" data-id="FPC-CP-2026-0047">
-            <div class="kc-id">FPC-CP-2026-0047</div>
+              data-action="case-open" data-id="FPC-CP-2026-0049">
+            <div class="kc-id">FPC-CP-2026-0049</div>
             <div class="kc-cat">Child marriage</div>
             <div class="kc-meta">Mwanjasi · Girl 0–5
               </div>
@@ -3075,9 +3082,12 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
       <div class="shot-col">
         <div class="shot-tb"><div><b>Monitoring Visits &amp; Actions</b><i>Monitoring</i></div>
           <div class="ss-user">AC Executive Director</div></div>
-        <div class="shot-main"><div class="shot-scale"><section class="view active"><div class="sec-title">Monitoring visits &amp; actions</div>
+        <div class="shot-main"><div class="shot-scale"><section class="view active"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="sec-title">Monitoring visits &amp; actions</div>
     <div class="sec-sub">9 visits this project year, in FPC's own template.
-      Every issue raised becomes a tracked action with an owner and a date.</div>
+      Every issue raised becomes a tracked action with an owner and a date.</div></div>
+    <button class="btn btn-primary" data-action="form-open" data-id="visit-report">
+      <i class="bi bi-plus-lg"></i> New visit report</button></div>
 
     <div class="kpi-row">
       <div class="kpi">
@@ -5517,7 +5527,7 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
         <span style="font-size:11px;color:var(--ink-mute)">visible to the Executive Director</span></div>
       <div class="tbl-scroll"><table class="audit">
         <tr class="">
-          <td class="a-ts">2026-10-05 22:33</td>
+          <td class="a-ts">2026-10-05 13:25</td>
           <td>Executive Director</td>
           <td>Viewed case detail</td>
           <td class="a-ref">FPC-CP-2026-0003</td></tr><tr class="">
@@ -5616,9 +5626,10 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
       <div class="g-ch-no">Chapter 10</div>
       <h2>Monitoring: forms, visits, by-laws and evidence</h2>
       <p class="g-sub">The instruments FPC already uses, in the system.</p>
-      <p>Nine field forms, all working offline, each naming the reports it feeds. Two are wired end to end in
-       this demonstration — the attendance register and the by-laws checklist — and the rest show their
-       field layout.</p>
+      <p>Nine field forms, all working offline, each naming the reports it feeds. Four are wired end to end in
+       this demonstration — the attendance register, the by-laws checklist, case intake and the monitoring
+       visit report — and the rest show their field layout. Costs that are not an activity are posted on
+       Budget &amp; Spend with Record expense.</p>
 <h3>Evidence and consent</h3>
 <p>9 items in the photo library, 8
        with a consent declaration on file. The one without is held for internal use and
@@ -5809,10 +5820,13 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
       <div class="shot-col">
         <div class="shot-tb"><div><b>Budget &amp; Spend</b><i>Finance</i></div>
           <div class="ss-user">AC Executive Director</div></div>
-        <div class="shot-main"><div class="shot-scale"><section class="view active"><div class="sec-title">Budget &amp; spend</div>
+        <div class="shot-main"><div class="shot-scale"><section class="view active"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="sec-title">Budget &amp; spend</div>
     <div class="sec-sub">Two donors in two currencies, against one register of activity costs.
       Demo rates: 1 EUR = 2,030 MWK ·
-      1 GBP = 2,370 MWK.</div>
+      1 GBP = 2,370 MWK.</div></div>
+    <button class="btn btn-primary" data-action="exp-new">
+      <i class="bi bi-plus-lg"></i> Record expense</button></div>
 
     <div class="banner info"><i class="bi bi-info-circle-fill"></i>
       <div>Illustrative figures — confirm with FPC finance before any external use.</div></div>
@@ -5876,6 +5890,14 @@ figcaption{font-size:11px;color:#6c7a72;text-align:center;margin-top:8px;font-st
     </div>
 
     
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head"><h3>Expenses posted</h3>
+        <span style="font-size:11.5px;color:var(--ink-mute)">costs that are not an activity —
+          staff, office, administration</span></div>
+      <div class="card-body"><div style="font-size:12.5px;color:var(--ink-soft)">Nothing posted to this fund's ledger yet.
+            Activity costs come from each activity record; use <strong>Record expense</strong> for
+            everything else.</div></div></div>
 
     <div class="card" style="margin-bottom:18px">
       <div class="card-head"><h3>Budget lines</h3>
